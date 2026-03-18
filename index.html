@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ICF-SL · Non-Reporting HF Filter</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#eef2f7;font-family:'Oswald',Arial,sans-serif;color:#1a1a1a;font-size:14px;}
+code{font-family:'Roboto Mono',monospace;background:#e0e9f5;padding:1px 6px;border-radius:3px;font-size:12px;color:#004080;}
+
+.page{max-width:1300px;margin:0 auto;padding:20px;}
+
+/* HEADER */
+.page-header{background:linear-gradient(135deg,#002c5a 0%,#004080 60%,#005faa 100%);color:#fff;padding:26px 32px;text-align:center;border-radius:10px 10px 0 0;border-bottom:4px solid #ffc107;position:relative;overflow:hidden;}
+.page-header::before{content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;background:rgba(255,193,7,.07);border-radius:50%;}
+.page-header::after{content:'';position:absolute;bottom:-60px;left:-30px;width:180px;height:180px;background:rgba(255,255,255,.04);border-radius:50%;}
+.logo-row{display:flex;justify-content:center;margin-bottom:14px;}
+.logo-box{background:#fff;border-radius:10px;padding:8px 14px;box-shadow:0 4px 14px rgba(0,0,0,.2);}
+.logo-box img{width:84px;height:auto;display:block;}
+.org{font-size:12px;font-weight:700;letter-spacing:2px;opacity:.9;margin-bottom:2px;}
+.tagline{font-size:10px;font-style:italic;opacity:.72;margin-bottom:16px;}
+.page-header h1{font-size:28px;font-weight:700;letter-spacing:.5px;margin-bottom:4px;position:relative;}
+.page-header .sub{font-size:13px;opacity:.82;position:relative;}
+.header-badges{display:flex;justify-content:center;gap:10px;margin-top:14px;flex-wrap:wrap;position:relative;}
+.hbadge{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:10px;font-weight:700;padding:4px 12px;border-radius:12px;letter-spacing:.5px;}
+.hbadge.gold{background:rgba(255,193,7,.25);border-color:#ffc107;color:#ffd54f;}
+
+/* MAIN */
+.main-card{background:#fff;border:4px double #004080;border-top:none;border-radius:0 0 10px 10px;box-shadow:0 8px 28px rgba(0,64,128,.13);margin-bottom:22px;}
+
+/* SECTION */
+.section{padding:26px 30px;border-bottom:2px dashed #c0d4ec;}
+.section:last-child{border-bottom:none;}
+.section-hdr{background:linear-gradient(90deg,#004080 0%,#005aa3 100%);color:#fff;padding:12px 20px;margin:-26px -30px 22px;display:flex;align-items:center;gap:12px;border-radius:0;}
+.section-icon{background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.45);width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;}
+.section-title{font-size:15px;font-weight:700;letter-spacing:.6px;}
+.section-badge{background:#ffc107;color:#1a1a1a;font-size:10px;font-weight:700;padding:3px 10px;border-radius:10px;margin-left:auto;letter-spacing:.5px;}
+
+/* UPLOAD */
+.dropzone{background:#f6f9fd;border:2.5px dashed #004080;border-radius:10px;padding:36px 18px;text-align:center;cursor:pointer;transition:all .25s;min-height:160px;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.dropzone:hover,.dropzone.over{background:#e4edf9;border-color:#0056b3;border-style:solid;}
+.dropzone.done{background:#edf9f0;border-color:#28a745;border-style:solid;}
+.dropzone input{display:none;}
+.dz-icon{font-size:42px;margin-bottom:10px;}
+.dz-title{font-size:14px;font-weight:700;color:#004080;margin-bottom:4px;}
+.dropzone.done .dz-title{color:#155724;}
+.dz-sub{font-size:11px;color:#777;line-height:1.6;}
+.dz-status{margin-top:10px;font-size:11px;font-weight:700;color:#28a745;}
+
+/* CHIPS */
+.chip-wrap{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0;}
+.chip{padding:8px 14px;background:#fff;border:2px solid #004080;border-radius:20px;cursor:pointer;font-size:12px;font-weight:600;transition:all .2s;display:inline-flex;align-items:center;gap:7px;font-family:'Oswald',Arial,sans-serif;}
+.chip:hover{background:#e4edf9;}
+.chip.selected{background:#004080;color:#fff;}
+.chip .chip-num{background:#fff;color:#004080;min-width:18px;height:18px;border-radius:50%;display:none;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;padding:0 2px;}
+.chip.selected .chip-num{display:flex;}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin:16px 0;}
+.stat-box{background:#fff;border:3px solid #004080;border-radius:8px;padding:14px 10px;text-align:center;}
+.stat-box .sv{font-size:1.65rem;font-weight:700;color:#004080;line-height:1;}
+.stat-box .sl{font-size:10px;color:#666;margin-top:5px;letter-spacing:.5px;text-transform:uppercase;}
+.stat-box.green{border-color:#28a745;}.stat-box.green .sv{color:#28a745;}
+.stat-box.red{border-color:#dc3545;}.stat-box.red .sv{color:#dc3545;}
+.stat-box.gold{border-color:#e6a817;}.stat-box.gold .sv{color:#b07800;}
+.stat-box.teal{border-color:#17a2b8;}.stat-box.teal .sv{color:#17a2b8;}
+
+/* FILTER CONFIG */
+.config-box{background:#f0f5fb;border:2px solid #004080;border-radius:10px;padding:18px 22px;margin:16px 0;}
+.config-box h4{font-size:11px;font-weight:700;color:#004080;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:14px;border-bottom:2px solid #c0d4ec;padding-bottom:8px;}
+.radio-row{display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border:2px solid #c0d4ec;border-radius:8px;margin-bottom:10px;cursor:pointer;transition:all .2s;}
+.radio-row:hover{border-color:#004080;background:#e8f0fa;}
+.radio-row.active{border-color:#004080;background:#e0ecfb;}
+.radio-row input[type=radio]{width:16px;height:16px;accent-color:#004080;cursor:pointer;flex-shrink:0;margin-top:2px;}
+.radio-row .rl{font-size:13px;font-weight:700;color:#004080;}
+.radio-row .rs{font-size:11px;color:#777;margin-top:2px;}
+
+/* EMPTY CONDITION TOGGLES */
+.cond-box{background:#fff;border:2px solid #c0d4ec;border-radius:8px;padding:14px 16px;margin:14px 0;}
+.cond-box h4{font-size:11px;font-weight:700;color:#004080;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;}
+.toggle-row{display:flex;flex-wrap:wrap;gap:8px;}
+.toggle-chip{padding:6px 14px;background:#f6f9fd;border:2px solid #c0d4ec;border-radius:16px;cursor:pointer;font-size:12px;font-weight:600;transition:all .2s;font-family:'Oswald',Arial,sans-serif;}
+.toggle-chip:hover{border-color:#004080;background:#e4edf9;}
+.toggle-chip.on{background:#004080;color:#fff;border-color:#004080;}
+
+/* PREVIEW TABLE */
+.tbl-wrap{overflow:auto;border:2px solid #004080;border-radius:8px;max-height:340px;}
+.tbl{width:100%;border-collapse:collapse;font-size:12px;}
+.tbl th{background:#004080;color:#fff;padding:9px 13px;text-align:left;position:sticky;top:0;white-space:nowrap;font-weight:700;letter-spacing:.3px;}
+.tbl td{padding:7px 12px;border-bottom:1px solid #dde6f0;white-space:nowrap;color:#333;}
+.tbl tr:nth-child(even){background:#f0f5fb;}
+.tbl tr:hover{background:#dce8f8;}
+.tbl td.num{font-family:'Roboto Mono',monospace;text-align:right;color:#004080;font-weight:600;}
+.tbl th.rep{background:#28a745;}
+.tbl th.norep{background:#dc3545;}
+.tbl td.flag-yes{color:#28a745;font-weight:700;}
+.tbl td.flag-no{color:#dc3545;font-weight:700;}
+
+/* TAB BAR */
+.tab-bar{display:flex;border:2px solid #004080;border-radius:8px 8px 0 0;overflow:hidden;}
+.tab-btn{padding:9px 18px;font-size:12px;font-weight:700;font-family:'Oswald',Arial,sans-serif;border:none;background:#e0e9f5;color:#004080;cursor:pointer;text-transform:uppercase;letter-spacing:.5px;transition:all .2s;border-right:1px solid #b8cce4;}
+.tab-btn:last-child{border-right:none;}
+.tab-btn:hover{background:#c0d4ec;}
+.tab-btn.active{background:#004080;color:#fff;}
+.tab-panel{border:2px solid #004080;border-top:none;border-radius:0 0 8px 8px;padding:20px;}
+
+/* DOWNLOAD CARDS */
+.dl-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px;}
+.dl-card{background:#f6f9fd;border:3px solid #004080;border-radius:12px;padding:24px;text-align:center;}
+.dl-card.green{border-color:#28a745;}
+.dl-card.red{border-color:#dc3545;}
+.dl-card-icon{font-size:36px;margin-bottom:10px;}
+.dl-card h4{font-size:16px;font-weight:700;color:#004080;margin-bottom:6px;}
+.dl-card.green h4{color:#155724;}
+.dl-card.red h4{color:#721c24;}
+.dl-card p{font-size:11px;color:#666;margin-bottom:16px;line-height:1.5;}
+.dl-card .dl-count{font-size:2rem;font-weight:700;color:#004080;display:block;margin-bottom:4px;font-family:'Roboto Mono',monospace;}
+.dl-card.green .dl-count{color:#28a745;}
+.dl-card.red .dl-count{color:#dc3545;}
+.dl-fmt-row{display:flex;justify-content:center;gap:10px;margin-bottom:16px;}
+.fmt-btn{padding:6px 16px;font-size:11px;font-weight:700;border:2px solid #004080;border-radius:16px;background:#fff;color:#004080;cursor:pointer;font-family:'Oswald',Arial,sans-serif;text-transform:uppercase;transition:all .2s;}
+.fmt-btn:hover,.fmt-btn.active{background:#004080;color:#fff;}
+.dl-card.green .fmt-btn{border-color:#28a745;color:#28a745;}
+.dl-card.green .fmt-btn:hover,.dl-card.green .fmt-btn.active{background:#28a745;color:#fff;}
+.dl-card.red .fmt-btn{border-color:#dc3545;color:#dc3545;}
+.dl-card.red .fmt-btn:hover,.dl-card.red .fmt-btn.active{background:#dc3545;color:#fff;}
+
+/* BUTTONS */
+.btn{padding:10px 18px;border:2px solid #004080;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Oswald',Arial,sans-serif;text-transform:uppercase;letter-spacing:.5px;transition:all .2s;display:inline-flex;align-items:center;gap:8px;}
+.btn-primary{background:#004080;color:#fff;}.btn-primary:hover{background:#0056b3;}
+.btn-secondary{background:#fff;color:#004080;}.btn-secondary:hover{background:#004080;color:#fff;}
+.btn-success{background:#28a745;color:#fff;border-color:#28a745;}.btn-success:hover{background:#218838;}
+.btn-danger{background:#dc3545;color:#fff;border-color:#dc3545;}.btn-danger:hover{background:#b02a37;}
+.btn-warning{background:#ffc107;color:#1a1a1a;border-color:#ffc107;}.btn-warning:hover{background:#e0a800;}
+.btn-lg{padding:13px 28px;font-size:14px;}
+.btn-sm{padding:7px 13px;font-size:11px;}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+.btn-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px;}
+
+/* ALERTS */
+.alert{padding:.8rem 1rem;border-radius:6px;margin:.75rem 0;font-size:13px;font-weight:500;display:flex;align-items:flex-start;gap:10px;line-height:1.5;}
+.alert-info{background:#e0e9f5;border:2px solid #004080;color:#004080;}
+.alert-warning{background:#fff8e1;border:2px solid #ffc107;color:#7a5c00;}
+.alert-danger{background:#fde8e8;border:2px solid #dc3545;color:#721c24;}
+.alert-success{background:#edf9f0;border:2px solid #28a745;color:#155724;}
+
+/* SELECTED COLS LIST */
+.sel-cols-list{background:#e0ecfb;border:2px solid #004080;border-radius:8px;padding:12px 16px;margin:12px 0;}
+.sel-cols-list p{font-size:11px;font-weight:700;color:#004080;letter-spacing:.8px;text-transform:uppercase;margin-bottom:8px;}
+.col-pill{display:inline-flex;align-items:center;background:#004080;color:#fff;padding:4px 12px;border-radius:12px;margin:3px;font-size:11px;gap:6px;}
+.col-pill .pill-rm{background:rgba(255,255,255,.25);border:none;color:#fff;width:16px;height:16px;border-radius:50%;cursor:pointer;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;font-family:'Oswald',Arial,sans-serif;}
+.col-pill .pill-rm:hover{background:rgba(255,255,255,.5);}
+
+/* TOAST */
+.toast-wrap{position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;}
+.toast-item{background:#004080;color:#fff;padding:11px 18px;border-radius:8px;font-size:13px;font-weight:700;box-shadow:0 4px 16px rgba(0,0,0,.25);border-left:4px solid #ffc107;animation:slideIn .3s ease;}
+@keyframes slideIn{from{opacity:0;transform:translateX(30px);}to{opacity:1;transform:translateX(0);}}
+.toast-item.fade-out{animation:fadeOut .4s ease forwards;}
+@keyframes fadeOut{to{opacity:0;transform:translateX(30px);}}
+
+/* PROGRESS BAR */
+.progress-bar-wrap{background:#e0e9f5;border-radius:8px;height:14px;overflow:hidden;margin:8px 0;}
+.progress-bar-fill{height:100%;background:linear-gradient(90deg,#28a745,#5cb85c);border-radius:8px;transition:width .5s ease;}
+.progress-bar-fill.red{background:linear-gradient(90deg,#dc3545,#e57b82);}
+
+/* FOOTER */
+.page-footer{background:#004080;color:#fff;padding:16px 28px;text-align:center;font-size:12px;border-radius:8px;margin-top:18px;border-top:3px solid #ffc107;}
+.page-footer p{opacity:.8;font-size:11px;margin-top:3px;}
+
+.hidden{display:none!important;}
+@media(max-width:768px){.dl-grid,.tab-bar{grid-template-columns:1fr;flex-direction:column;}.page{padding:10px;}}
+</style>
+</head>
+<body>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<div class="page">
+
+<!-- HEADER -->
+<div class="page-header">
+  <div class="logo-row">
+    <div class="logo-box">
+      <img src="https://github.com/mohamedsillahkanu/gdp-dashboard-2/raw/6c7463b0d5c3be150aafae695a4bcbbd8aeb1499/ICF-SL.jpg" alt="ICF-SL" onerror="this.style.display='none'">
+    </div>
+  </div>
+  <p class="org">Informatics Consultancy Firm – Sierra Leone (ICF-SL)</p>
+  <p class="tagline">Driving Data-Driven Solutions for Health and Development</p>
+  <h1>Non-Reporting Health Facility Filter</h1>
+  <p class="sub">Identify &amp; Separate Reporting vs Non-Reporting Facilities · Export Split Datasets</p>
+  <div class="header-badges">
+    <span class="hbadge">Flexible Column Selection</span>
+    <span class="hbadge">Reporting Logic Config</span>
+    <span class="hbadge gold">CSV &amp; Excel Export</span>
+    <span class="hbadge">All Columns Preserved</span>
+  </div>
+</div>
+
+<div class="main-card">
+
+<!-- ══ STEP 1: UPLOAD ══ -->
+<div class="section" id="secUpload">
+  <div class="section-hdr">
+    <span class="section-icon">1</span>
+    <span class="section-title">UPLOAD HEALTH FACILITY DATA</span>
+    <span class="section-badge">STEP 1</span>
+  </div>
+  <label for="dataFileIn" style="display:block;max-width:560px;margin:0 auto;">
+    <div class="dropzone" id="dzData"
+      ondragover="event.preventDefault();this.classList.add('over')"
+      ondragleave="this.classList.remove('over')"
+      ondrop="this.classList.remove('over');handleFile(event.dataTransfer.files[0]);event.preventDefault()">
+      <input type="file" id="dataFileIn" accept=".csv,.xlsx,.xls" onchange="handleFile(this.files[0])">
+      <span class="dz-icon">📊</span>
+      <div class="dz-title">Click or drag &amp; drop your data file</div>
+      <div class="dz-sub">Excel (.xlsx / .xls) or CSV &nbsp;·&nbsp; All columns will be preserved in output<br>Each row = one health facility record</div>
+      <div class="dz-status" id="fileStatus"></div>
+    </div>
+  </label>
+  <div id="a1" style="max-width:560px;margin:10px auto 0;"></div>
+</div>
+
+<!-- ══ STEP 2: SELECT REPORTING COLUMNS ══ -->
+<div class="section hidden" id="secCols">
+  <div class="section-hdr">
+    <span class="section-icon">2</span>
+    <span class="section-title">SELECT REPORTING INDICATOR COLUMNS</span>
+    <span class="section-badge">STEP 2</span>
+  </div>
+
+  <div class="alert alert-info">
+    ℹ️ Select the column(s) that indicate whether a facility submitted a report. A facility is classified as <strong>non-reporting</strong> based on the logic you configure below.
+  </div>
+
+  <p style="font-size:11px;font-weight:700;color:#004080;letter-spacing:1px;text-transform:uppercase;margin:16px 0 6px;">Available Columns — Click to Select <span style="color:#888;font-size:10px;font-weight:400;text-transform:none;">(📝 = text &nbsp;|&nbsp; 🔢 = numeric &nbsp;|&nbsp; n = unique values)</span></p>
+  <div class="chip-wrap" id="chipWrap"></div>
+
+  <div class="sel-cols-list hidden" id="selColsList">
+    <p>Selected Reporting Columns:</p>
+    <div id="selColsPills"></div>
+  </div>
+
+  <!-- FILTER LOGIC -->
+  <div class="config-box" id="cfgBox" style="margin-top:20px;">
+    <h4>🔧 Non-Reporting Logic</h4>
+    <div class="radio-row active" id="rr_all" onclick="setLogic('all')">
+      <input type="radio" name="logic" id="logicAll" value="all" checked>
+      <div><div class="rl">ALL selected columns are empty / zero</div><div class="rs">A facility is non-reporting only when every selected column has no data. Strictest filter — fewer facilities flagged.</div></div>
+    </div>
+    <div class="radio-row" id="rr_any" onclick="setLogic('any')">
+      <input type="radio" name="logic" id="logicAny" value="any">
+      <div><div class="rl">ANY selected column is empty / zero</div><div class="rs">A facility is non-reporting if at least one selected column has no data. Broader filter — more facilities flagged.</div></div>
+    </div>
+
+    <div class="cond-box" style="margin-top:16px;">
+      <h4>📋 What counts as "no data" (empty)?</h4>
+      <p style="font-size:11px;color:#555;margin-bottom:10px;">Toggle conditions that will mark a value as "no report":</p>
+      <div class="toggle-row">
+        <div class="toggle-chip on" id="cond_blank" onclick="toggleCond('blank')">Blank / Null</div>
+        <div class="toggle-chip on" id="cond_zero" onclick="toggleCond('zero')">Zero (0)</div>
+        <div class="toggle-chip on" id="cond_dash" onclick="toggleCond('dash')">Dash (—/–/-)</div>
+        <div class="toggle-chip on" id="cond_na" onclick="toggleCond('na')">N/A, NA, None</div>
+        <div class="toggle-chip" id="cond_dot" onclick="toggleCond('dot')">Dot (.)</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="a2"></div>
+  <div class="btn-row">
+    <button class="btn btn-primary btn-lg" id="applyBtn" onclick="applyFilter()" disabled>▶ Apply Filter &amp; Preview Results</button>
+  </div>
+</div>
+
+<!-- ══ STEP 3: RESULTS & DOWNLOAD ══ -->
+<div class="section hidden" id="secResults">
+  <div class="section-hdr">
+    <span class="section-icon">3</span>
+    <span class="section-title">FILTER RESULTS &amp; DOWNLOAD</span>
+    <span class="section-badge">STEP 3</span>
+  </div>
+
+  <div class="stats-row" id="statsRow"></div>
+
+  <!-- progress bars -->
+  <div id="progressSection" style="margin:10px 0 20px;">
+    <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:#28a745;margin-bottom:3px;">
+      <span>Reporting</span><span id="pctRep">-</span>
+    </div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill" id="barRep" style="width:0%"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;color:#dc3545;margin-bottom:3px;margin-top:8px;">
+      <span>Non-Reporting</span><span id="pctNoRep">-</span>
+    </div>
+    <div class="progress-bar-wrap"><div class="progress-bar-fill red" id="barNoRep" style="width:0%"></div></div>
+  </div>
+
+  <!-- TABS: preview -->
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tb_rep" onclick="showTab('rep',this)">✅ Reporting HFs</button>
+    <button class="tab-btn" id="tb_norep" onclick="showTab('norep',this)">❌ Non-Reporting HFs</button>
+  </div>
+  <div class="tab-panel" id="tp_rep">
+    <p style="font-size:11px;color:#666;margin-bottom:10px;">Showing first 100 rows · All columns included in download</p>
+    <div class="tbl-wrap" id="tblRep"></div>
+  </div>
+  <div class="tab-panel hidden" id="tp_norep">
+    <p style="font-size:11px;color:#666;margin-bottom:10px;">Showing first 100 rows · All columns included in download</p>
+    <div class="tbl-wrap" id="tblNoRep"></div>
+  </div>
+
+  <!-- DOWNLOAD CARDS -->
+  <div class="dl-grid">
+    <div class="dl-card green">
+      <div class="dl-card-icon">✅</div>
+      <h4>Reporting Facilities</h4>
+      <span class="dl-count" id="dlRepCount">-</span>
+      <p>All original columns preserved. Facilities that submitted reports based on your filter criteria.</p>
+      <div class="dl-fmt-row">
+        <button class="fmt-btn active" id="fmtRepCSV" onclick="setFmt('rep','csv')">CSV</button>
+        <button class="fmt-btn" id="fmtRepXLSX" onclick="setFmt('rep','xlsx')">Excel</button>
+      </div>
+      <button class="btn btn-success btn-lg" onclick="downloadFile('rep')">📥 Download Reporting HFs</button>
+    </div>
+    <div class="dl-card red">
+      <div class="dl-card-icon">❌</div>
+      <h4>Non-Reporting Facilities</h4>
+      <span class="dl-count" id="dlNoRepCount">-</span>
+      <p>All original columns preserved. Facilities that did not report based on your filter criteria.</p>
+      <div class="dl-fmt-row">
+        <button class="fmt-btn active" id="fmtNoRepCSV" onclick="setFmt('norep','csv')">CSV</button>
+        <button class="fmt-btn" id="fmtNoRepXLSX" onclick="setFmt('norep','xlsx')">Excel</button>
+      </div>
+      <button class="btn btn-danger btn-lg" onclick="downloadFile('norep')">📥 Download Non-Reporting HFs</button>
+    </div>
+  </div>
+
+  <div id="a3"></div>
+  <div class="btn-row" style="margin-top:24px;">
+    <button class="btn btn-secondary" onclick="goBack()">← Modify Filter</button>
+    <button class="btn btn-warning" onclick="resetAll()">🔄 Start Over</button>
+  </div>
+</div>
+
+</div><!-- /main-card -->
+
+<div class="page-footer">
+  <strong>ICF-SL · Non-Reporting Health Facility Filter</strong>
+  <p>National Malaria Control Programme &nbsp;·&nbsp; Ministry of Health &amp; Sanitation, Sierra Leone</p>
+  <p style="margin-top:4px;font-size:10px;">© 2025 Informatics Consultancy Firm – Sierra Leone (ICF-SL)</p>
+</div>
+
+</div><!-- /page -->
+
+<script>
+/* ══════════════════════════════════
+   STATE
+══════════════════════════════════ */
+let rawData=[], headers=[], fileName='';
+let selectedCols=[];
+let filterLogic='all'; // 'all' | 'any'
+let conditions={blank:true,zero:true,dash:true,na:true,dot:false};
+let repData=[], noRepData=[];
+let fmtRep='csv', fmtNoRep='csv';
+
+/* ══════════════════════════════════
+   UTILS
+══════════════════════════════════ */
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const show=id=>document.getElementById(id).classList.remove('hidden');
+const hide=id=>document.getElementById(id).classList.add('hidden');
+const sc=id=>setTimeout(()=>document.getElementById(id).scrollIntoView({behavior:'smooth',block:'start'}),80);
+
+function toast(msg,dur=2800){
+  const wrap=document.getElementById('toastWrap');
+  const el=document.createElement('div');el.className='toast-item';el.textContent=msg;
+  wrap.appendChild(el);
+  setTimeout(()=>{el.classList.add('fade-out');setTimeout(()=>el.remove(),400);},dur);
+}
+
+/* ══════════════════════════════════
+   FILE LOAD
+══════════════════════════════════ */
+function handleFile(file){
+  if(!file)return;
+  fileName=file.name;
+  const ext=file.name.split('.').pop().toLowerCase();
+  if(!['csv','xlsx','xls'].includes(ext)){
+    document.getElementById('a1').innerHTML='<div class="alert alert-danger">❌ Please upload CSV or Excel (.xlsx/.xls).</div>';return;
+  }
+  const dz=document.getElementById('dzData');
+  dz.querySelector('.dz-title').textContent='Loading…';
+  const reader=new FileReader();
+  if(ext==='csv'){
+    reader.onload=e=>{
+      const r=Papa.parse(e.target.result,{header:true,skipEmptyLines:true,dynamicTyping:false});
+      if(!r.data.length){document.getElementById('a1').innerHTML='<div class="alert alert-danger">File is empty.</div>';return;}
+      rawData=r.data;headers=r.meta.fields||[];onLoaded();
+    };
+    reader.readAsText(file);
+  }else{
+    reader.onload=e=>{
+      const wb=XLSX.read(e.target.result,{type:'binary'});
+      const ws=wb.Sheets[wb.SheetNames[0]];
+      const d=XLSX.utils.sheet_to_json(ws,{defval:''});
+      if(!d.length){document.getElementById('a1').innerHTML='<div class="alert alert-danger">Spreadsheet is empty.</div>';return;}
+      rawData=d;headers=Object.keys(d[0]);onLoaded();
+    };
+    reader.readAsBinaryString(file);
+  }
+}
+
+function analyzeColType(col){
+  let num=0,tot=0;
+  const n=Math.min(rawData.length,300);
+  for(let i=0;i<n;i++){
+    const v=rawData[i][col];
+    if(v==null||String(v).trim()==='')continue;
+    tot++;
+    if(!isNaN(Number(String(v).trim())))num++;
+  }
+  return tot===0?'text':(num/tot>=0.6?'numeric':'text');
+}
+
+function onLoaded(){
+  const dz=document.getElementById('dzData');
+  dz.classList.add('done');dz.querySelector('.dz-title').textContent='File Loaded ✓';
+  document.getElementById('fileStatus').textContent=`${fileName} · ${rawData.length.toLocaleString()} rows · ${headers.length} columns`;
+  document.getElementById('a1').innerHTML='';
+  buildChips();
+  show('secCols');sc('secCols');
+  toast(`Loaded ${rawData.length.toLocaleString()} rows from "${fileName}"`);
+}
+
+/* ══════════════════════════════════
+   CHIPS
+══════════════════════════════════ */
+function buildChips(){
+  const wrap=document.getElementById('chipWrap');
+  wrap.innerHTML=headers.map(col=>{
+    const type=analyzeColType(col);
+    const icon=type==='text'?'📝':'🔢';
+    const uniq=new Set(rawData.map(r=>String(r[col]??'').trim()).filter(Boolean)).size;
+    return `<div class="chip" data-col="${esc(col)}" onclick="toggleChip(this,'${esc(col).replace(/'/g,"\\'")}')">
+      <span class="chip-num"></span>
+      <span>${icon} ${esc(col)} <span style="font-size:10px;opacity:.6;">(${uniq})</span></span>
+    </div>`;
+  }).join('');
+}
+
+function toggleChip(el,col){
+  const idx=selectedCols.indexOf(col);
+  if(idx>-1){selectedCols.splice(idx,1);}
+  else{selectedCols.push(col);}
+  updateChipUI();
+  updatePills();
+  document.getElementById('applyBtn').disabled=selectedCols.length===0;
+}
+
+function updateChipUI(){
+  document.querySelectorAll('#chipWrap .chip').forEach(chip=>{
+    const col=chip.dataset.col;
+    const idx=selectedCols.indexOf(col);
+    const num=chip.querySelector('.chip-num');
+    if(idx>-1){chip.classList.add('selected');num.style.display='flex';num.textContent=idx+1;}
+    else{chip.classList.remove('selected');num.style.display='none';}
+  });
+}
+
+function updatePills(){
+  const list=document.getElementById('selColsList');
+  const pills=document.getElementById('selColsPills');
+  if(!selectedCols.length){list.classList.add('hidden');return;}
+  list.classList.remove('hidden');
+  pills.innerHTML=selectedCols.map(col=>`
+    <span class="col-pill">
+      ${esc(col)}
+      <button class="pill-rm" onclick="removeCol('${esc(col).replace(/'/g,"\\'")}')">✕</button>
+    </span>`).join('');
+}
+
+function removeCol(col){
+  const idx=selectedCols.indexOf(col);
+  if(idx>-1){selectedCols.splice(idx,1);}
+  updateChipUI();
+  updatePills();
+  document.getElementById('applyBtn').disabled=selectedCols.length===0;
+}
+
+/* ══════════════════════════════════
+   LOGIC / CONDITIONS
+══════════════════════════════════ */
+function setLogic(v){
+  filterLogic=v;
+  ['all','any'].forEach(x=>{
+    const rr=document.getElementById('rr_'+x);
+    const rb=document.getElementById('logic'+x.charAt(0).toUpperCase()+x.slice(1));
+    if(x===v){rr.classList.add('active');rb.checked=true;}
+    else{rr.classList.remove('active');rb.checked=false;}
+  });
+}
+
+function toggleCond(key){
+  conditions[key]=!conditions[key];
+  document.getElementById('cond_'+key).classList.toggle('on',conditions[key]);
+}
+
+function isEmpty(val){
+  const s=String(val==null?'':val).trim();
+  if(conditions.blank&&(s===''||val==null))return true;
+  if(conditions.zero&&s==='0')return true;
+  if(conditions.dash&&/^[—–\-]+$/.test(s))return true;
+  if(conditions.na&&/^(n\/a|na|none|null)$/i.test(s))return true;
+  if(conditions.dot&&s==='.')return true;
+  return false;
+}
+
+function isNonReporting(row){
+  if(!selectedCols.length)return false;
+  const flags=selectedCols.map(col=>isEmpty(row[col]));
+  return filterLogic==='all'?flags.every(Boolean):flags.some(Boolean);
+}
+
+/* ══════════════════════════════════
+   APPLY FILTER
+══════════════════════════════════ */
+function applyFilter(){
+  if(!selectedCols.length){toast('Select at least one column');return;}
+  document.getElementById('a2').innerHTML='';
+
+  repData=[];noRepData=[];
+  rawData.forEach(row=>{
+    isNonReporting(row)?noRepData.push(row):repData.push(row);
+  });
+
+  buildStats();
+  buildPreviewTable('tblRep', repData, 'rep');
+  buildPreviewTable('tblNoRep', noRepData, 'norep');
+  document.getElementById('dlRepCount').textContent=repData.length.toLocaleString();
+  document.getElementById('dlNoRepCount').textContent=noRepData.length.toLocaleString();
+
+  show('secResults');sc('secResults');
+  toast(`Filter applied — ${repData.length.toLocaleString()} reporting, ${noRepData.length.toLocaleString()} non-reporting`);
+}
+
+function buildStats(){
+  const total=rawData.length;
+  const rep=repData.length;
+  const norep=noRepData.length;
+  const pctR=total?Math.round(rep/total*100):0;
+  const pctN=total?Math.round(norep/total*100):0;
+
+  document.getElementById('statsRow').innerHTML=`
+    <div class="stat-box"><div class="sv">${total.toLocaleString()}</div><div class="sl">Total HFs</div></div>
+    <div class="stat-box green"><div class="sv">${rep.toLocaleString()}</div><div class="sl">Reporting</div></div>
+    <div class="stat-box red"><div class="sv">${norep.toLocaleString()}</div><div class="sl">Non-Reporting</div></div>
+    <div class="stat-box teal"><div class="sv">${pctR}%</div><div class="sl">Reporting Rate</div></div>
+    <div class="stat-box gold"><div class="sv">${selectedCols.length}</div><div class="sl">Cols Used</div></div>
+  `;
+  document.getElementById('pctRep').textContent=`${rep.toLocaleString()} (${pctR}%)`;
+  document.getElementById('pctNoRep').textContent=`${norep.toLocaleString()} (${pctN}%)`;
+  document.getElementById('barRep').style.width=pctR+'%';
+  document.getElementById('barNoRep').style.width=pctN+'%';
+}
+
+/* ══════════════════════════════════
+   PREVIEW TABLE
+══════════════════════════════════ */
+function buildPreviewTable(wrapId, data, type){
+  const wrap=document.getElementById(wrapId);
+  if(!data.length){wrap.innerHTML=`<div class="alert alert-warning" style="margin:0;">No ${type==='rep'?'reporting':'non-reporting'} facilities found with current settings.</div>`;return;}
+  const preview=data.slice(0,100);
+  const thClass=type==='rep'?'rep':'norep';
+  let html=`<table class="tbl"><thead><tr>`;
+  headers.forEach(h=>html+=`<th class="${selectedCols.includes(h)?thClass:''}">${esc(h)}</th>`);
+  html+=`</tr></thead><tbody>`;
+  preview.forEach(row=>{
+    html+=`<tr>`;
+    headers.forEach(h=>{
+      const v=row[h]??'';
+      const isSelCol=selectedCols.includes(h);
+      const empty=isSelCol&&isEmpty(v);
+      const cls=isSelCol?(empty?'flag-no':'flag-yes'):'';
+      html+=`<td class="${cls}">${esc(v)}</td>`;
+    });
+    html+=`</tr>`;
+  });
+  html+=`</tbody></table>`;
+  wrap.innerHTML=html;
+}
+
+function showTab(tab,el){
+  ['rep','norep'].forEach(t=>{
+    document.getElementById('tp_'+t).classList.toggle('hidden',t!==tab);
+    document.getElementById('tb_'+t).classList.toggle('active',t===tab);
+  });
+}
+
+/* ══════════════════════════════════
+   FORMAT SELECTORS
+══════════════════════════════════ */
+function setFmt(which,fmt){
+  if(which==='rep'){
+    fmtRep=fmt;
+    document.getElementById('fmtRepCSV').classList.toggle('active',fmt==='csv');
+    document.getElementById('fmtRepXLSX').classList.toggle('active',fmt==='xlsx');
+  }else{
+    fmtNoRep=fmt;
+    document.getElementById('fmtNoRepCSV').classList.toggle('active',fmt==='csv');
+    document.getElementById('fmtNoRepXLSX').classList.toggle('active',fmt==='xlsx');
+  }
+}
+
+/* ══════════════════════════════════
+   DOWNLOAD
+══════════════════════════════════ */
+function downloadFile(which){
+  const data=which==='rep'?repData:noRepData;
+  const fmt=which==='rep'?fmtRep:fmtNoRep;
+  const label=which==='rep'?'reporting':'non_reporting';
+  const base=(fileName.replace(/\.[^.]+$/,'')+'_'+label).replace(/\s+/g,'_');
+
+  if(!data.length){toast('No data to download');return;}
+
+  if(fmt==='csv'){
+    const rows=[headers.join(','),...data.map(r=>headers.map(k=>`"${String(r[k]??'').replace(/"/g,'""')}"`).join(','))];
+    const blob=new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8;'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=base+'.csv';a.click();
+    toast(`Downloaded: ${base}.csv`);
+  }else{
+    const ws=XLSX.utils.json_to_sheet(data,{header:headers});
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,which==='rep'?'Reporting':'Non-Reporting');
+    XLSX.writeFile(wb,base+'.xlsx');
+    toast(`Downloaded: ${base}.xlsx`);
+  }
+}
+
+/* ══════════════════════════════════
+   NAV / RESET
+══════════════════════════════════ */
+function goBack(){
+  hide('secResults');show('secCols');sc('secCols');
+}
+
+function resetAll(){
+  rawData=[];headers=[];fileName='';
+  selectedCols=[];filterLogic='all';
+  conditions={blank:true,zero:true,dash:true,na:true,dot:false};
+  repData=[];noRepData=[];fmtRep='csv';fmtNoRep='csv';
+
+  const dz=document.getElementById('dzData');
+  dz.classList.remove('done','over');
+  dz.querySelector('.dz-title').textContent='Click or drag & drop your data file';
+  document.getElementById('fileStatus').textContent='';
+  document.getElementById('dataFileIn').value='';
+  document.getElementById('a1').innerHTML='';
+  document.getElementById('a2').innerHTML='';
+  document.getElementById('chipWrap').innerHTML='';
+  document.getElementById('selColsPills').innerHTML='';
+  document.getElementById('selColsList').classList.add('hidden');
+  document.getElementById('applyBtn').disabled=true;
+
+  // reset conditions UI
+  ['blank','zero','dash','na'].forEach(k=>document.getElementById('cond_'+k).classList.add('on'));
+  document.getElementById('cond_dot').classList.remove('on');
+  setLogic('all');
+
+  hide('secCols');hide('secResults');show('secUpload');sc('secUpload');
+  toast('Reset complete — upload a new file');
+}
+</script>
+</body>
+</html>
